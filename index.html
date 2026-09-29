@@ -769,7 +769,7 @@
   </script>
 <!-- HAFA SECURE LOGIN LAYER: additive block only -->
 <style id="hafa-secure-login-style">
-  #hafaSecureGate{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,#172554 0%,#080b16 45%,#02030a 100%);font-family:Arial,sans-serif;overflow:hidden}
+  #hafaSecureGate{position:fixed;top:0;right:0;bottom:0;left:0;width:100%;height:100%;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,#172554 0%,#080b16 45%,#02030a 100%);font-family:Arial,sans-serif;overflow:hidden;pointer-events:auto}
   #hafaSecureGate *{box-sizing:border-box}
   .hafa-grid{position:absolute;inset:-50%;background-image:linear-gradient(rgba(56,189,248,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.07) 1px,transparent 1px);background-size:42px 42px;transform:perspective(500px) rotateX(58deg);animation:hafaGrid 12s linear infinite;opacity:.6}
   @keyframes hafaGrid{to{transform:perspective(500px) rotateX(58deg) translateY(42px)}}
@@ -806,7 +806,6 @@
 <script id="hafa-secure-login-script">
 (() => {
   // To change the password, replace ONLY this SHA-256 hash.
-  // Current password: 0911
   const PASSWORD_HASH = "bdc9fc73f65aece77761e33bcb3bc5571a2d06d8185d5f403f0442dffb0c3cf3";
   const RELOCK_MINUTES = 5; // Change this number to set the re-login time in minutes.
   const MAX_ATTEMPTS = 5;
@@ -831,7 +830,18 @@
     status.className = "hafa-status";
     const messages = ["SCANNING CREDENTIALS...", "VERIFYING HASH...", "CHECKING ACCESS TOKEN...", "FINALIZING SECURITY CHECK..."];
     for (const msg of messages) { status.textContent = msg; await new Promise(r => setTimeout(r, 350)); }
-    const valid = (await sha256(value)) === PASSWORD_HASH;
+    let valid = false;
+    try {
+      valid = (await sha256(value)) === PASSWORD_HASH;
+    } catch {
+      attempts = MAX_ATTEMPTS;
+      scan.style.display = "none";
+      input.disabled = true;
+      button.disabled = true;
+      status.textContent = "SECURITY ERROR // ACCESS LOCKED";
+      status.className = "hafa-status error";
+      return;
+    }
     if (valid) {
       status.textContent = "WELCOME HAFA"; status.className = "hafa-status ok";
       await new Promise(r => setTimeout(r, 650));
@@ -847,7 +857,37 @@
     }
   }
   button.addEventListener("click", authenticate);
-  input.addEventListener("keydown", e => { if (e.key === "Enter") authenticate(); });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      authenticate();
+    }
+  });
+
+  // Keep keyboard interaction inside the password gate while it is active.
+  document.addEventListener("keydown", e => {
+    if (!gate.isConnected) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (!gate.contains(e.target)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // Block clicks/touches from reaching the main application until authentication succeeds.
+  document.addEventListener("click", e => {
+    if (!gate.isConnected) return;
+    if (!gate.contains(e.target)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
   setTimeout(() => input.focus(), 100);
 })();
 </script>
