@@ -767,5 +767,90 @@
       }
     });
   </script>
+<!-- HAFA SECURE LOGIN LAYER: additive block only -->
+<style id="hafa-secure-login-style">
+  #hafaSecureGate{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,#172554 0%,#080b16 45%,#02030a 100%);font-family:Arial,sans-serif;overflow:hidden}
+  #hafaSecureGate *{box-sizing:border-box}
+  .hafa-grid{position:absolute;inset:-50%;background-image:linear-gradient(rgba(56,189,248,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.07) 1px,transparent 1px);background-size:42px 42px;transform:perspective(500px) rotateX(58deg);animation:hafaGrid 12s linear infinite;opacity:.6}
+  @keyframes hafaGrid{to{transform:perspective(500px) rotateX(58deg) translateY(42px)}}
+  .hafa-login-card{position:relative;width:min(430px,94vw);padding:34px 28px 30px;border:1px solid rgba(125,211,252,.28);border-radius:26px;background:linear-gradient(145deg,rgba(15,23,42,.88),rgba(2,6,23,.72));box-shadow:0 30px 90px rgba(0,0,0,.65),inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-align:center;color:#e5f6ff;transform:perspective(1000px) rotateX(2deg)}
+  .hafa-lock{width:76px;height:76px;margin:0 auto 18px;border-radius:22px;display:grid;place-items:center;font-size:35px;background:linear-gradient(145deg,#0ea5e9,#2563eb);box-shadow:0 0 35px rgba(14,165,233,.4),inset 0 2px 4px rgba(255,255,255,.25)}
+  .hafa-login-card h1{margin:0;font-size:25px;letter-spacing:2px}.hafa-login-card p{margin:9px 0 24px;color:#94a3b8;font-size:13px}
+  #hafaPassword{width:100%;height:54px;border:1px solid rgba(125,211,252,.25);outline:0;border-radius:15px;background:rgba(2,6,23,.8);color:#fff;text-align:center;font-size:23px;letter-spacing:8px;box-shadow:inset 0 0 18px rgba(0,0,0,.35)}
+  #hafaPassword:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.12),inset 0 0 18px rgba(0,0,0,.35)}
+  #hafaCheck{width:100%;height:52px;margin-top:14px;border:0;border-radius:15px;cursor:pointer;color:#fff;font-size:15px;font-weight:700;letter-spacing:1px;background:linear-gradient(90deg,#0284c7,#2563eb);box-shadow:0 10px 25px rgba(37,99,235,.25);transition:.2s}
+  #hafaCheck:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(37,99,235,.35)}
+  #hafaCheck:disabled{opacity:.7;cursor:wait;transform:none}
+  .hafa-status{min-height:24px;margin-top:16px;font-family:monospace;font-size:12px;color:#38bdf8}.hafa-status.error{color:#fb7185}.hafa-status.ok{color:#4ade80}
+  .hafa-scan{display:none;margin:16px auto 0;height:4px;width:100%;overflow:hidden;border-radius:99px;background:rgba(148,163,184,.12)}
+  .hafa-scan i{display:block;width:35%;height:100%;background:linear-gradient(90deg,transparent,#38bdf8,transparent);animation:hafaScan .8s linear infinite}
+  @keyframes hafaScan{from{transform:translateX(-150%)}to{transform:translateX(350%)}}
+  .hafa-binary{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.08;color:#38bdf8;font:11px monospace;line-height:16px;word-break:break-all}
+  .hafa-binary span{position:absolute;animation:hafaFall linear infinite}.hafa-binary span:nth-child(1){left:8%;animation-duration:7s}.hafa-binary span:nth-child(2){left:27%;animation-duration:9s;animation-delay:-3s}.hafa-binary span:nth-child(3){left:51%;animation-duration:6s;animation-delay:-1s}.hafa-binary span:nth-child(4){left:76%;animation-duration:10s;animation-delay:-5s}.hafa-binary span:nth-child(5){left:92%;animation-duration:8s;animation-delay:-2s}
+  @keyframes hafaFall{from{transform:translateY(-100%)}to{transform:translateY(110vh)}}
+  @media(max-width:480px){.hafa-login-card{padding:28px 20px}.hafa-login-card h1{font-size:21px}}
+</style>
+<div id="hafaSecureGate" aria-label="Secure login">
+  <div class="hafa-grid"></div>
+  <div class="hafa-binary"><span>010010110101001101011001010011010101</span><span>101101001011010010110101001101010011</span><span>001101010110100101101001010110100101</span><span>110010101101001011010010101101001011</span><span>010110100101101001011010010110100101</span></div>
+  <div class="hafa-login-card">
+    <div class="hafa-lock">🔐</div>
+    <h1>SECURE HAFA</h1>
+    <p>رمز عبور را وارد کنید تا وارد سیستم شوید</p>
+    <input id="hafaPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="32" placeholder="••••••••" aria-label="Password">
+    <button id="hafaCheck" type="button">تأیید و ورود</button>
+    <div class="hafa-scan" id="hafaScan"><i></i></div>
+    <div class="hafa-status" id="hafaStatus">SYSTEM READY HAFA</div>
+  </div>
+</div>
+<script id="hafa-secure-login-script">
+(() => {
+  // To change the password, replace ONLY this SHA-256 hash.
+  // Current password: 0911
+  const PASSWORD_HASH = "bdc9fc73f65aece77761e33bcb3bc5571a2d06d8185d5f403f0442dffb0c3cf3";
+  const RELOCK_MINUTES = 5; // Change this number to set the re-login time in minutes.
+  const MAX_ATTEMPTS = 5;
+  let attempts = 0;
+  const gate = document.getElementById("hafaSecureGate");
+  const input = document.getElementById("hafaPassword");
+  const button = document.getElementById("hafaCheck");
+  const status = document.getElementById("hafaStatus");
+  const scan = document.getElementById("hafaScan");
+
+  async function sha256(value) {
+    const data = new TextEncoder().encode(value);
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function authenticate() {
+    if (button.disabled || attempts >= MAX_ATTEMPTS) return;
+    const value = input.value;
+    if (!value) { status.textContent = "ENTER PASSWORD INPUT REQUIRED"; status.className = "hafa-status error"; return; }
+    button.disabled = true; input.disabled = true; scan.style.display = "block";
+    status.className = "hafa-status";
+    const messages = ["SCANNING CREDENTIALS...", "VERIFYING HASH...", "CHECKING ACCESS TOKEN...", "FINALIZING SECURITY CHECK..."];
+    for (const msg of messages) { status.textContent = msg; await new Promise(r => setTimeout(r, 350)); }
+    const valid = (await sha256(value)) === PASSWORD_HASH;
+    if (valid) {
+      status.textContent = "WELCOME HAFA"; status.className = "hafa-status ok";
+      await new Promise(r => setTimeout(r, 650));
+      gate.style.transition = "opacity .55s ease, transform .55s ease"; gate.style.opacity = "0"; gate.style.transform = "scale(1.03)";
+      setTimeout(() => gate.remove(), 600);
+      setTimeout(() => location.reload(), RELOCK_MINUTES * 60 * 1000);
+    } else {
+      attempts++; scan.style.display = "none"; input.disabled = false; button.disabled = false; input.value = ""; input.focus();
+      const remaining = MAX_ATTEMPTS - attempts;
+      status.textContent = remaining ? `ACCESS DENIED ${remaining} ATTEMPT${remaining === 1 ? "" : "S"} REMAINING` : "ACCESS LOCKED // RELOAD REQUIRED";
+      status.className = "hafa-status error";
+      if (!remaining) { input.disabled = true; button.disabled = true; }
+    }
+  }
+  button.addEventListener("click", authenticate);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") authenticate(); });
+  setTimeout(() => input.focus(), 100);
+})();
+</script>
+
 </body>
 </html>
